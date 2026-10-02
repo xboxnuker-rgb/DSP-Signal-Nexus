@@ -1,0 +1,10 @@
+bin/
+obj/
+dist/
+*.user
+*.suo
+*.log
+.vs/
+.idea/
+.vscode/
+LDBTool.CustomID.cfg

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>SignalNexus</AssemblyName>
+    <RootNamespace>SignalNexus</RootNamespace>
+    <Version>0.2.13</Version>
+    <DSPGamePath Condition="'$(DSPGamePath)' == ''">D:\Games\DSP</DSPGamePath>
+    <DSPProfilePath Condition="'$(DSPProfilePath)' == ''">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\me-bepinex-5421</DSPProfilePath>
+    <BepInExPath>$(DSPProfilePath)\BepInEx</BepInExPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="LDBTool">
+      <HintPath>$(BepInExPath)\plugins\xiaoye97-LDBTool\LDBTool.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="CommonAPI">
+      <HintPath>$(BepInExPath)\plugins\CommonAPI-CommonAPI\CommonAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(DSPGamePath)\DSPGAME_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(DSPGamePath)\DSPGAME_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(DSPGamePath)\DSPGAME_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(DSPGamePath)\DSPGAME_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(DSPGamePath)\DSPGAME_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateReferencePaths" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(DSPGamePath)\DSPGAME_Data\Managed\Assembly-CSharp.dll')" Text="DSPGamePath must point to a Dyson Sphere Program installation." />
+    <Error Condition="!Exists('$(BepInExPath)\core\BepInEx.dll')" Text="DSPProfilePath must point to an r2modman profile containing BepInEx, LDBTool and CommonAPI." />
+  </Target>
+</Project>
