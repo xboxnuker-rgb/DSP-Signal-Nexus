@@ -4,6 +4,8 @@
 
 # Signal Nexus
 
+[![Thunderstore downloads](https://img.shields.io/thunderstore/dt/GSVS_UK_ACM/SignalNexus?style=flat-square&logo=thunderstore&label=downloads)](https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/)
+
 Signal Nexus combines three Dyson Sphere Program utility buildings into one compact, belt-mounted facility: a **Traffic Monitor**, **Holo Beacon**, and **Tesla Tower**.
 
 Monitor belt flow, drive a visible holographic status marker from the same signal IP, sound alarms, and connect nearby buildings to the power grid—all from one building and one unified settings panel.
@@ -37,7 +39,7 @@ Monitor belt flow, drive a visible holographic status marker from the same signa
 
 ### r2modman / Thunderstore Mod Manager
 
-Install **Signal Nexus** from the Dyson Sphere Program community once the package is published. Its required dependencies are declared in the package manifest.
+Install **[Signal Nexus from the Dyson Sphere Program Thunderstore community](https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/)** through r2modman or Thunderstore Mod Manager. Its required dependencies are declared in the package manifest and will be installed automatically.
 
 ### Manual
 
