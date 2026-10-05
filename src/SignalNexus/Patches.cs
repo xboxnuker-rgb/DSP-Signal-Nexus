@@ -103,6 +103,164 @@ internal static class EntityComponentPatch
             return;
         }
         NexusLookup.SyncMarkerFromMonitor(__instance, entity);
+        NexusRenderSplitPatch.EnsureOverlay(__instance, entityId);
+    }
+}
+
+[HarmonyPatch(typeof(DigitalSystem), nameof(DigitalSystem.GameTick))]
+internal static class NexusRenderSplitPatch
+{
+    private sealed class Overlay
+    {
+        internal int EntityId;
+        internal int ShadowAnimId;
+        internal int ModelInstId;
+    }
+
+    private struct Snapshot
+    {
+        internal Overlay Overlay;
+        internal AnimData MonitorAnim;
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<PlanetFactory, System.Collections.Generic.Dictionary<int, Overlay>> Overlays = new();
+    private static long _lastReconcileTick = long.MinValue;
+
+    internal static void EnsureOverlay(PlanetFactory factory, int entityId)
+    {
+        if (!NexusLookup.TryGetEntity(factory, entityId, out var entity)) return;
+        var manager = factory.planet?.factoryModel?.gpuiManager;
+        if (manager == null || manager.GetObjectRenderer(Plugin.MarkerModelId) == null) return;
+
+        if (!Overlays.TryGetValue(factory, out var planetOverlays))
+        {
+            planetOverlays = new System.Collections.Generic.Dictionary<int, Overlay>();
+            Overlays.Add(factory, planetOverlays);
+        }
+
+        if (planetOverlays.TryGetValue(entityId, out var current) && IsOverlayAlive(manager, current)) return;
+        if (current != null) RemoveOverlay(factory, current);
+
+        var shadowAnimId = AllocateShadowAnimId(factory, planetOverlays);
+        if (shadowAnimId <= 0) return;
+        var modelInstId = manager.AddModel(Plugin.MarkerModelId, shadowAnimId, entity.pos, entity.rot, true);
+        if (modelInstId <= 0)
+        {
+            Plugin.Log.LogWarning($"Could not create the split Holo Beacon renderer for Signal Nexus {entityId}.");
+            return;
+        }
+
+        planetOverlays[entityId] = new Overlay
+        {
+            EntityId = entityId,
+            ShadowAnimId = shadowAnimId,
+            ModelInstId = modelInstId
+        };
+    }
+
+    [HarmonyPrefix]
+    private static void Prefix(DigitalSystem __instance, out System.Collections.Generic.List<Snapshot> __state)
+    {
+        var factory = __instance?.factory;
+        __state = new System.Collections.Generic.List<Snapshot>();
+        if (factory == null) return;
+
+        var tick = GameMain.gameTick;
+        if (!Overlays.ContainsKey(factory) || tick - _lastReconcileTick >= 60)
+        {
+            Reconcile(factory);
+            _lastReconcileTick = tick;
+        }
+
+        if (!Overlays.TryGetValue(factory, out var planetOverlays)) return;
+        foreach (var overlay in planetOverlays.Values)
+        {
+            if (overlay.EntityId <= 0 || overlay.EntityId >= factory.entityAnimPool.Length ||
+                overlay.ShadowAnimId <= 0 || overlay.ShadowAnimId >= factory.entityAnimPool.Length)
+                continue;
+            __state.Add(new Snapshot
+            {
+                Overlay = overlay,
+                MonitorAnim = factory.entityAnimPool[overlay.EntityId]
+            });
+        }
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(DigitalSystem __instance, System.Collections.Generic.List<Snapshot> __state)
+    {
+        var factory = __instance?.factory;
+        if (factory == null || __state == null) return;
+        foreach (var snapshot in __state)
+        {
+            var overlay = snapshot.Overlay;
+            if (overlay.EntityId <= 0 || overlay.EntityId >= factory.entityAnimPool.Length ||
+                overlay.ShadowAnimId <= 0 || overlay.ShadowAnimId >= factory.entityAnimPool.Length)
+                continue;
+
+            // DigitalSystem has just written beacon colour, radius and height to
+            // the Nexus entity's AnimData. Give that result to the overlay, then
+            // restore the monitor result for the physical flow display.
+            factory.entityAnimPool[overlay.ShadowAnimId] = factory.entityAnimPool[overlay.EntityId];
+            factory.entityAnimPool[overlay.EntityId] = snapshot.MonitorAnim;
+        }
+    }
+
+    private static void Reconcile(PlanetFactory factory)
+    {
+        if (!Overlays.TryGetValue(factory, out var planetOverlays))
+        {
+            planetOverlays = new System.Collections.Generic.Dictionary<int, Overlay>();
+            Overlays.Add(factory, planetOverlays);
+        }
+
+        foreach (var pair in planetOverlays.ToArray())
+        {
+            if (NexusLookup.TryGetEntity(factory, pair.Key, out _)) continue;
+            RemoveOverlay(factory, pair.Value);
+            planetOverlays.Remove(pair.Key);
+        }
+
+        for (var entityId = 1; entityId < factory.entityCursor; entityId++)
+        {
+            if (factory.entityPool[entityId].id == entityId && factory.entityPool[entityId].protoId == Plugin.ItemId)
+                EnsureOverlay(factory, entityId);
+        }
+    }
+
+    private static int AllocateShadowAnimId(PlanetFactory factory, System.Collections.Generic.Dictionary<int, Overlay> planetOverlays)
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var reserved = new System.Collections.Generic.HashSet<int>(planetOverlays.Values.Select(x => x.ShadowAnimId));
+            for (var candidate = factory.entityAnimPool.Length - 1; candidate > factory.entityCursor + 64; candidate--)
+            {
+                if (!reserved.Contains(candidate) && factory.entityPool[candidate].id == 0)
+                    return candidate;
+            }
+
+            AccessTools.Method(typeof(PlanetFactory), "SetEntityCapacity")?.Invoke(factory,
+                new object[] { Math.Max(factory.entityAnimPool.Length * 2, factory.entityCursor + 512) });
+        }
+
+        Plugin.Log.LogError("Could not reserve an animation record for a Signal Nexus Holo Beacon overlay.");
+        return 0;
+    }
+
+    private static bool IsOverlayAlive(GPUInstancingManager manager, Overlay overlay)
+    {
+        var renderer = manager.GetObjectRenderer(Plugin.MarkerModelId);
+        return renderer != null && overlay.ModelInstId > 0 && overlay.ModelInstId < renderer.instCursor &&
+               renderer.instPool[overlay.ModelInstId].objId == (uint)overlay.ShadowAnimId;
+    }
+
+    private static void RemoveOverlay(PlanetFactory factory, Overlay overlay)
+    {
+        var manager = factory?.planet?.factoryModel?.gpuiManager;
+        if (manager != null && IsOverlayAlive(manager, overlay))
+            manager.RemoveModel(Plugin.MarkerModelId, overlay.ModelInstId, true);
+        if (factory?.entityAnimPool != null && overlay.ShadowAnimId > 0 && overlay.ShadowAnimId < factory.entityAnimPool.Length)
+            factory.entityAnimPool[overlay.ShadowAnimId] = default;
     }
 }
 

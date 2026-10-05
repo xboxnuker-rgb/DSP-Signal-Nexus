@@ -19,7 +19,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "codex.dsp.signal-nexus";
     public const string PluginName = "Signal Nexus";
-    public const string PluginVersion = "0.2.13";
+    public const string PluginVersion = "0.2.14";
 
     // Stay in the established mod-prototype bands. MoreMegaStructure maintains
     // fixed-size item lookup arrays and cannot safely consume very large IDs.
@@ -28,10 +28,12 @@ public sealed class Plugin : BaseUnityPlugin
     // Proliferator Mk.IV rebuilds the vanilla model index without LDBTool's
     // high-ID expansion. It owns 720/721, making 722 the first compatible slot.
     private const int PreferredModelId = 722;
+    private const int PreferredMarkerModelId = 723;
 
     public static int ItemId { get; private set; } = PreferredItemId;
     public static int RecipeId { get; private set; } = PreferredRecipeId;
     public static int ModelId { get; private set; } = PreferredModelId;
+    public static int MarkerModelId { get; private set; } = PreferredMarkerModelId;
 
     internal static ManualLogSource Log;
     internal static ItemProto TrafficMonitor;
@@ -40,6 +42,7 @@ public sealed class Plugin : BaseUnityPlugin
     internal static ItemProto NexusItem;
     internal static RecipeProto NexusRecipe;
     internal static ModelProto NexusModel;
+    internal static ModelProto MarkerModel;
 
     private Harmony _harmony;
 
@@ -52,6 +55,7 @@ public sealed class Plugin : BaseUnityPlugin
 
         _harmony = new Harmony(PluginGuid);
         _harmony.PatchAll(typeof(EntityComponentPatch));
+        _harmony.PatchAll(typeof(NexusRenderSplitPatch));
         _harmony.PatchAll(typeof(NexusInspectPatch));
         _harmony.PatchAll(typeof(MonitorWindowPatch));
         _harmony.PatchAll(typeof(MonitorSpeakerPatch));
@@ -90,6 +94,7 @@ public sealed class Plugin : BaseUnityPlugin
         ItemId = FindFreeId(PreferredItemId, LDB.items.dataArray.Where(proto => proto != null).Select(proto => proto.ID));
         RecipeId = FindFreeId(PreferredRecipeId, LDB.recipes.dataArray.Where(proto => proto != null).Select(proto => proto.ID));
         ModelId = FindFreeId(PreferredModelId, LDB.models.dataArray.Where(proto => proto != null).Select(proto => proto.ID));
+        MarkerModelId = FindFreeId(PreferredMarkerModelId, LDB.models.dataArray.Where(proto => proto != null).Select(proto => proto.ID).Append(ModelId));
 
         TrafficMonitor = FindItem("流速器", "Traffic Monitor");
         HoloBeacon = FindItem("激光灯塔", "Holo Beacon");
@@ -107,9 +112,10 @@ public sealed class Plugin : BaseUnityPlugin
         var nexusBuildIndex = FindFreeBuildIndex(TrafficMonitor.BuildIndex / 100, ItemId);
 
         var sourceModel = LDB.models.Select(TrafficMonitor.ModelIndex);
-        if (sourceModel == null)
+        var markerSourceModel = LDB.models.Select(HoloBeacon.ModelIndex);
+        if (sourceModel == null || markerSourceModel == null)
         {
-            Log.LogError("Signal Nexus could not locate the Traffic Monitor model prototype.");
+            Log.LogError("Signal Nexus could not locate its source model prototypes.");
             return;
         }
 
@@ -120,6 +126,18 @@ public sealed class Plugin : BaseUnityPlugin
         NexusModel.prefabDesc.modelIndex = ModelId;
         Traverse.Create(NexusModel).Field("prewarmed").SetValue(false);
         LDBTool.PreAddProto(NexusModel);
+
+        // The beacon overlay is rendered as a second GPU instance with its own
+        // animation record. Traffic Monitor and Holo Beacon both use
+        // AnimData.working_length (flow versus height), so combining their
+        // submeshes into one instance makes whichever system updates last win.
+        MarkerModel = ShallowClone(markerSourceModel);
+        MarkerModel.ID = MarkerModelId;
+        MarkerModel.Name = "SignalNexusMarkerModel";
+        MarkerModel.prefabDesc = ShallowClone(markerSourceModel.prefabDesc);
+        MarkerModel.prefabDesc.modelIndex = MarkerModelId;
+        Traverse.Create(MarkerModel).Field("prewarmed").SetValue(false);
+        LDBTool.PreAddProto(MarkerModel);
 
         NexusItem = ShallowClone(TrafficMonitor);
         NexusItem.ID = ItemId;
@@ -184,20 +202,28 @@ public sealed class Plugin : BaseUnityPlugin
         NexusItem = LDB.items.Select(ItemId);
         NexusRecipe = LDB.recipes.Select(RecipeId);
         NexusModel = LDB.models.Select(ModelId);
-        if (NexusItem == null || NexusRecipe == null || NexusModel == null || TrafficMonitor == null || HoloBeacon == null || TeslaTower == null)
+        MarkerModel = LDB.models.Select(MarkerModelId);
+        if (NexusItem == null || NexusRecipe == null || NexusModel == null || MarkerModel == null || TrafficMonitor == null || HoloBeacon == null || TeslaTower == null)
             return;
 
-        // Grid indices are reused across the replicator's Items/Buildings tabs.
-        // Treating a different item type as a collision previously moved
-        // Proliferator Mk.IV into an invisible building row. Only reserve a slot
-        // among peers of the same item type, and move Nexus rather than anyone
-        // else's prototype.
-        var finalGridIndex = FindFreeCraftingGridIndex(TrafficMonitor, ItemId);
-        var finalBuildIndex = FindFreeBuildIndex(TrafficMonitor.BuildIndex / 100, ItemId);
-        NexusItem.GridIndex = finalGridIndex;
-        NexusRecipe.GridIndex = finalGridIndex;
-        NexusItem.BuildIndex = finalBuildIndex;
-        LDBTool.SetBuildBar(finalBuildIndex / 100, finalBuildIndex % 100, ItemId);
+        // Signal Nexus deliberately replaces the vanilla Traffic Monitor in both
+        // user-facing menus. Move Traffic Monitor to the safe slot Nexus found
+        // after every mod registered, then give Nexus the original selector slot
+        // and Logistics hotbar key. This explicit swap avoids the old 2106 Solar
+        // Panel collision and keeps the agreed F9 placement deterministic.
+        var trafficGridIndex = TrafficMonitor.GridIndex;
+        var trafficBuildIndex = TrafficMonitor.BuildIndex;
+        var relocatedTrafficGridIndex = FindFreeCraftingGridIndex(TrafficMonitor, ItemId);
+
+        TrafficMonitor.GridIndex = relocatedTrafficGridIndex;
+        foreach (var recipe in LDB.recipes.dataArray.Where(recipe => recipe?.Results != null && recipe.Results.Contains(TrafficMonitor.ID)))
+            recipe.GridIndex = relocatedTrafficGridIndex;
+        TrafficMonitor.BuildIndex = 0;
+
+        NexusItem.GridIndex = trafficGridIndex;
+        NexusRecipe.GridIndex = trafficGridIndex;
+        NexusItem.BuildIndex = trafficBuildIndex;
+        LDBTool.SetBuildBar(trafficBuildIndex / 100, trafficBuildIndex % 100, ItemId);
 
         var trafficDesc = TrafficMonitor.prefabDesc;
         var markerDesc = HoloBeacon.prefabDesc;
@@ -222,7 +248,7 @@ public sealed class Plugin : BaseUnityPlugin
         desc.workEnergyPerTick = Math.Max(1L, trafficDesc.workEnergyPerTick + markerDesc.workEnergyPerTick);
         desc.idleEnergyPerTick = Math.Max(1L, trafficDesc.idleEnergyPerTick + markerDesc.idleEnergyPerTick);
 
-        TryBuildCompositeMeshes(desc, trafficDesc, markerDesc);
+        BuildMarkerOverlayModel(MarkerModel, markerDesc, trafficDesc);
         NexusModel.prefabDesc = desc;
         NexusModel.meshBounds = desc.mesh != null ? desc.mesh.bounds : NexusModel.meshBounds;
         NexusItem.prefabDesc = desc;
@@ -233,7 +259,7 @@ public sealed class Plugin : BaseUnityPlugin
         Traverse.Create(NexusRecipe).Field("_iconSprite").SetValue(icon);
         NexusRecipe.IconPath = string.Empty;
 
-        Log.LogInfo($"Signal Nexus ready at grid {finalGridIndex}, build {finalBuildIndex}: monitor + marker + {desc.powerConnectDistance:0.#}m power connection / {desc.powerCoverRadius:0.#}m coverage. Traffic Monitor grid {TrafficMonitor.GridIndex}, build {TrafficMonitor.BuildIndex}.");
+        Log.LogInfo($"Signal Nexus ready at Traffic Monitor grid {trafficGridIndex}, build {trafficBuildIndex}: monitor + marker + {desc.powerConnectDistance:0.#}m power connection / {desc.powerCoverRadius:0.#}m coverage. Traffic Monitor moved to grid {relocatedTrafficGridIndex} and removed from the occupied F9 hotbar slot.");
     }
 
     private static ItemProto FindItem(params string[] names)
@@ -246,7 +272,7 @@ public sealed class Plugin : BaseUnityPlugin
     private static int FindFreeCraftingGridIndex(ItemProto template, int excludedItemId)
     {
         var occupied = new HashSet<int>(LDB.items.dataArray
-            .Where(item => item != null && item.ID != excludedItemId && item.Type == template.Type)
+            .Where(item => item != null && item.ID != excludedItemId && item.BuildIndex > 0)
             .Select(item => item.GridIndex));
         var baseRow = Math.Max(1, Math.Min(8, (template.GridIndex - 2000) / 100));
         var baseColumn = Math.Max(1, Math.Min(14, template.GridIndex % 100));
@@ -273,7 +299,7 @@ public sealed class Plugin : BaseUnityPlugin
         var occupied = new HashSet<int>(LDB.items.dataArray.Where(item => item != null && item.ID != excludedItemId && item.BuildIndex > 0).Select(item => item.BuildIndex));
         if (preferredCategory >= 1 && preferredCategory <= 15)
         {
-            for (var slot = 12; slot >= 1; slot--)
+            for (var slot = 10; slot >= 1; slot--)
             {
                 var candidate = preferredCategory * 100 + slot;
                 if (!occupied.Contains(candidate)) return candidate;
@@ -281,7 +307,7 @@ public sealed class Plugin : BaseUnityPlugin
         }
 
         for (var category = 12; category >= 1; category--)
-        for (var slot = 12; slot >= 1; slot--)
+        for (var slot = 10; slot >= 1; slot--)
         {
             var candidate = category * 100 + slot;
             if (!occupied.Contains(candidate)) return candidate;
@@ -296,12 +322,14 @@ public sealed class Plugin : BaseUnityPlugin
         return (T)AccessTools.Method(typeof(object), "MemberwiseClone").Invoke(source, null);
     }
 
-    private static void TryBuildCompositeMeshes(PrefabDesc target, PrefabDesc traffic, PrefabDesc marker)
+    private static void BuildMarkerOverlayModel(ModelProto targetModel, PrefabDesc marker, PrefabDesc traffic)
     {
         try
         {
-            if (traffic.lodMeshes == null || marker.lodMeshes == null) return;
-            var lodCount = Math.Max(traffic.lodMeshes.Length, marker.lodMeshes.Length);
+            if (marker.lodMeshes == null) return;
+            var target = ShallowClone(marker);
+            target.modelIndex = MarkerModelId;
+            var lodCount = marker.lodMeshes.Length;
             target.lodMeshes = new Mesh[lodCount];
             target.lodMaterials = new Material[lodCount][];
             target.lodBlueprintMaterials = new Material[lodCount][];
@@ -310,37 +338,35 @@ public sealed class Plugin : BaseUnityPlugin
             var markerTransform = Matrix4x4.TRS(new Vector3(0f, Math.Max(0.75f, traffic.roughHeight * 0.55f), 0f), Quaternion.identity, Vector3.one * 0.34f);
             for (var lod = 0; lod < lodCount; lod++)
             {
-                var trafficMesh = traffic.lodMeshes[Math.Min(lod, traffic.lodMeshes.Length - 1)];
                 var markerMesh = marker.lodMeshes[Math.Min(lod, marker.lodMeshes.Length - 1)];
-                if (trafficMesh == null || markerMesh == null) continue;
+                if (markerMesh == null) continue;
 
                 var combines = new List<CombineInstance>();
-                AddSubmeshes(combines, trafficMesh, Matrix4x4.identity);
                 AddSubmeshes(combines, markerMesh, markerTransform);
-                var mesh = new Mesh { name = $"Signal Nexus LOD {lod}" };
+                var mesh = new Mesh { name = $"Signal Nexus Marker Overlay LOD {lod}" };
                 mesh.CombineMeshes(combines.ToArray(), false, true);
                 mesh.RecalculateBounds();
                 target.lodMeshes[lod] = mesh;
 
-                var trafficMaterials = GetLodMaterials(traffic.lodMaterials, lod);
                 var markerMaterials = GetLodMaterials(marker.lodMaterials, lod);
-                target.lodMaterials[lod] = trafficMaterials.Concat(markerMaterials).ToArray();
-                var trafficBlueprint = GetLodMaterials(traffic.lodBlueprintMaterials, lod, trafficMaterials);
+                target.lodMaterials[lod] = markerMaterials;
                 var markerBlueprint = GetLodMaterials(marker.lodBlueprintMaterials, lod, markerMaterials);
-                target.lodBlueprintMaterials[lod] = trafficBlueprint.Concat(markerBlueprint).ToArray();
+                target.lodBlueprintMaterials[lod] = markerBlueprint;
                 target.lodSubmeshIgnores[lod] = new bool[target.lodMaterials[lod].Length];
             }
 
-            target.mesh = target.lodMeshes.FirstOrDefault(x => x != null) ?? traffic.mesh;
-            target.meshes = target.mesh != null ? new[] { target.mesh } : traffic.meshes;
-            target.materials = target.lodMaterials.FirstOrDefault(x => x != null) ?? traffic.materials;
+            target.mesh = target.lodMeshes.FirstOrDefault(x => x != null) ?? marker.mesh;
+            target.meshes = target.mesh != null ? new[] { target.mesh } : marker.meshes;
+            target.materials = target.lodMaterials.FirstOrDefault(x => x != null) ?? marker.materials;
             target.roughHeight = Math.Max(traffic.roughHeight, markerTransform.MultiplyPoint3x4(Vector3.up * marker.roughHeight).y);
             target.cullingHeight = Math.Max(traffic.cullingHeight, target.roughHeight);
-            Log.LogInfo("Built the Traffic Monitor + roof Holo Beacon composite mesh.");
+            targetModel.prefabDesc = target;
+            targetModel.meshBounds = target.mesh != null ? target.mesh.bounds : targetModel.meshBounds;
+            Log.LogInfo($"Built split Holo Beacon overlay model {MarkerModelId}; Traffic Monitor and beacon now have independent animation records.");
         }
         catch (Exception error)
         {
-            Log.LogWarning($"Composite mesh creation failed; using the Traffic Monitor body: {error.Message}");
+            Log.LogWarning($"Holo Beacon overlay model creation failed: {error.Message}");
         }
     }
 

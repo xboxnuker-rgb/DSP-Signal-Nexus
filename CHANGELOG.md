@@ -2,6 +2,13 @@
 
 All notable changes to Signal Nexus are documented here.
 
+## 0.2.14 - 2026-10-05
+
+- Put Signal Nexus in the Traffic Monitor's original Buildings-selector and Logistics F9 positions, moving the vanilla Traffic Monitor to Nexus's safe row-VI selector slot.
+- Fixed the earlier automatic placement that could replace the Solar Panel or select an invisible construction-hotbar slot.
+- Split the Traffic Monitor body and Holo Beacon overlay into independent animation records so the physical display shows live belt flow instead of the rounded holo height.
+- Kept cross-tab grid reuse for non-building items, preserving compatibility with Proliferator Mk.IV and similar content mods.
+
 ## 0.2.13 - 2026-10-02
 
 - Added the production-ready combined Signal Nexus building.

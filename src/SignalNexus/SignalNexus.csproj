@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>SignalNexus</AssemblyName>
     <RootNamespace>SignalNexus</RootNamespace>
-    <Version>0.2.13</Version>
+    <Version>0.2.14</Version>
     <DSPGamePath Condition="'$(DSPGamePath)' == ''">D:\Games\DSP</DSPGamePath>
     <DSPProfilePath Condition="'$(DSPProfilePath)' == ''">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\me-bepinex-5421</DSPProfilePath>
     <BepInExPath>$(DSPProfilePath)\BepInEx</BepInExPath>

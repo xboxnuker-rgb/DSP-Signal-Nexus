@@ -76,7 +76,7 @@ Pass `-DotNetPath "PATH_TO_DOTNET"` if the .NET SDK is not on `PATH`.
 
 ## Compatibility notes
 
-Signal Nexus uses LDBTool to register its building and recipe, then patches the vanilla monitor window so the combined state remains native to DSP's save, blueprint, and copy/paste systems. Version 0.2.13 was tested in a heavily modded DSP 0.10.34 profile, including BuildToolOpt and DeliverySlotsTweaks.
+Signal Nexus uses LDBTool to register its building and recipe, then patches the vanilla monitor window so the combined state remains native to DSP's save, blueprint, and copy/paste systems. It is tested in a heavily modded DSP 0.10.34 profile, including BuildToolOpt and DeliverySlotsTweaks.
 
 Please report reproducible issues with the game version, mod versions, and the relevant BepInEx log attached.
 

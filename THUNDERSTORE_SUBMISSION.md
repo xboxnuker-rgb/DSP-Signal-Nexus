@@ -4,7 +4,7 @@
 
 - **Community:** Dyson Sphere Program
 - **Package name:** SignalNexus
-- **Version:** 0.2.13
+- **Version:** 0.2.14
 - **Website:** https://github.com/xboxnuker-rgb/DSP-Signal-Nexus
 - **Published listing:** https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/
 - **Short description:** Combines a Traffic Monitor, Holo Beacon and Tesla Tower into one compact, configurable utility building.
@@ -18,7 +18,7 @@
 
 ## Upload asset
 
-Upload `dist/SignalNexus-0.2.13.zip`. Its root contains:
+Upload `dist/SignalNexus-0.2.14.zip`. Its root contains:
 
 - `SignalNexus.dll`
 - `manifest.json`
@@ -40,5 +40,5 @@ Signal Nexus combines a Traffic Monitor, Holo Beacon, and Tesla Tower into one c
 - [x] DLL was rebuilt from the repository source.
 - [x] Shift-click duplication tested.
 - [x] Save/reload persistence tested.
-- [x] Upload the ZIP to the DSP Thunderstore community.
+- [ ] Upload the 0.2.14 ZIP to the DSP Thunderstore community.
 - [ ] Install the published package into a clean r2modman profile for final smoke testing.
