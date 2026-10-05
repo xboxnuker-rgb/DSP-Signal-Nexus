@@ -1,14 +1,16 @@
-# Thunderstore submission draft
+# Thunderstore release record
 
 ## Listing
 
 - **Community:** Dyson Sphere Program
 - **Package name:** SignalNexus
 - **Version:** 0.2.14
+- **Published:** 2026-10-06
 - **Website:** https://github.com/xboxnuker-rgb/DSP-Signal-Nexus
 - **Published listing:** https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/
+- **GitHub release:** https://github.com/xboxnuker-rgb/DSP-Signal-Nexus/releases/tag/v0.2.14
 - **Short description:** Combines a Traffic Monitor, Holo Beacon and Tesla Tower into one compact, configurable utility building.
-- **Suggested categories:** Mods, Utility, Buildings
+- **Categories:** Belts and Sorters, Info, Power, Quality of Life
 
 ## Package dependencies
 
@@ -18,7 +20,7 @@
 
 ## Upload asset
 
-Upload `dist/SignalNexus-0.2.14.zip`. Its root contains:
+Published `dist/SignalNexus-0.2.14.zip` (`SHA-256 F18EC0B4DF50BE3B2252DDE5FCDF49A948E54A0F6BEAA141C606F11DE102772F`). Its root contains:
 
 - `SignalNexus.dll`
 - `manifest.json`
@@ -31,7 +33,7 @@ Upload `dist/SignalNexus-0.2.14.zip`. Its root contains:
 
 Signal Nexus combines a Traffic Monitor, Holo Beacon, and Tesla Tower into one compact belt-mounted facility. Configure belt-flow conditions, alarms, signal IP, hologram colour and visibility, Dark Fog beaconing, height, radius, memo, and tags from one unified window. The built-in Tesla Tower connects and powers nearby facilities. Copy/paste, Shift-click duplication, blueprints, and save/reload retain the combined settings.
 
-## Pre-upload checklist
+## Release verification
 
 - [x] Package name and version match the assembly and manifest.
 - [x] Dependencies are declared.
@@ -40,5 +42,7 @@ Signal Nexus combines a Traffic Monitor, Holo Beacon, and Tesla Tower into one c
 - [x] DLL was rebuilt from the repository source.
 - [x] Shift-click duplication tested.
 - [x] Save/reload persistence tested.
-- [ ] Upload the 0.2.14 ZIP to the DSP Thunderstore community.
-- [ ] Install the published package into a clean r2modman profile for final smoke testing.
+- [x] Selector placement, Logistics F9 placement, and live physical flow display tested in game.
+- [x] Uploaded the 0.2.14 ZIP to the DSP Thunderstore community.
+- [x] Verified the live dependency string and download links report 0.2.14.
+- [ ] Optional: install the published package into a separate clean r2modman profile for an additional smoke test.
