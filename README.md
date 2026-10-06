@@ -4,7 +4,7 @@
 
 # Signal Nexus
 
-[![Thunderstore downloads](https://img.shields.io/thunderstore/dt/GSVS_UK_ACM/SignalNexus?style=flat-square&logo=thunderstore&label=downloads)](https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/)
+[![Thunderstore downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fthunderstore.io%2Fapi%2Fv1%2Fpackage-metrics%2FGSVS_UK_ACM%2FSignalNexus%2F&query=%24.downloads&label=downloads&style=flat-square&color=23FFB0)](https://old.thunderstore.io/c/dyson-sphere-program/p/GSVS_UK_ACM/SignalNexus/)
 
 Signal Nexus combines three Dyson Sphere Program utility buildings into one compact, belt-mounted facility: a **Traffic Monitor**, **Holo Beacon**, and **Tesla Tower**.
 
