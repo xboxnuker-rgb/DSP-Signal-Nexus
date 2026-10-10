@@ -2,6 +2,11 @@
 
 All notable changes to Signal Nexus are documented here.
 
+## 0.2.15 - 2026-10-10
+
+- Added a purple-and-green GSVS startup banner to the BepInEx log.
+- Added explicit Signal Nexus version, game version, plugin ID, creator, and combined-building details to startup diagnostics.
+
 ## 0.2.14 - 2026-10-05
 
 - Put Signal Nexus in the Traffic Monitor's original Buildings-selector and Logistics F9 positions, moving the vanilla Traffic Monitor to Nexus's safe row-VI selector slot.

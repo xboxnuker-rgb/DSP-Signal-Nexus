@@ -19,6 +19,7 @@ Monitor belt flow, drive a visible holographic status marker from the same signa
 - Direct unified configuration window with Holo settings placed below Alarm settings.
 - Building copy/paste, Shift-click duplication, blueprints, and save/reload persistence.
 - A compact recipe that consumes one Traffic Monitor, one Holo Beacon, and one Tesla Tower.
+- A startup log banner that identifies the mod version, target game, plugin ID, creator, and combined facilities.
 
 ## Screenshots
 

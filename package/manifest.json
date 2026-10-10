@@ -1,6 +1,6 @@
 {
   "name": "SignalNexus",
-  "version_number": "0.2.14",
+  "version_number": "0.2.15",
   "website_url": "https://github.com/xboxnuker-rgb/DSP-Signal-Nexus",
   "description": "Combines a Traffic Monitor, Holo Beacon and Tesla Tower into one compact, configurable utility building.",
   "dependencies": [

@@ -19,7 +19,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "codex.dsp.signal-nexus";
     public const string PluginName = "Signal Nexus";
-    public const string PluginVersion = "0.2.14";
+    public const string PluginVersion = "0.2.15";
 
     // Stay in the established mod-prototype bands. MoreMegaStructure maintains
     // fixed-size item lookup arrays and cannot safely consume very large IDs.
@@ -49,6 +49,7 @@ public sealed class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log = Logger;
+        StartupBanner.Print(Logger);
         RegisterStrings();
         LDBTool.PreAddDataAction += AddPrototypes;
         LDBTool.PostAddDataAction += FinishPrototypes;
